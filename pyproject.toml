@@ -8,10 +8,15 @@ version = "0.1.0"
 description = "Personal Ontario swim meet tracker"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+  "flask>=3.0,<4.0",
+]
 
 [tool.setuptools]
 packages = ["tracker", "tracker.adapters"]
+
+[tool.setuptools.package-data]
+tracker = ["templates/*.html", "static/*.css", "static/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

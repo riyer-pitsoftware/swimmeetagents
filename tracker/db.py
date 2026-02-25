@@ -87,6 +87,18 @@ class FollowedAthlete:
     club: str | None
 
 
+@dataclass(frozen=True)
+class TimelineResult:
+    captured_at: str
+    meet_name: str
+    session_name: str
+    event_name: str
+    athlete_name: str
+    club: str | None
+    time_text: str
+    source_url: str
+
+
 class Database:
     def __init__(self, path: Path):
         self.path = path
@@ -259,3 +271,45 @@ class Database:
             (normalized, event_name),
         ).fetchone()
         return None if row is None else row["pb"]
+
+    def list_recent_results(
+        self,
+        limit: int = 100,
+        athlete_name: str | None = None,
+    ) -> list[TimelineResult]:
+        query = """
+        SELECT
+          r.captured_at,
+          m.name AS meet_name,
+          s.name AS session_name,
+          e.name AS event_name,
+          r.athlete_name,
+          r.club,
+          r.time_text,
+          r.source_url
+        FROM results r
+        JOIN events e ON e.id = r.event_id
+        JOIN sessions s ON s.id = e.session_id
+        JOIN meets m ON m.id = s.meet_id
+        """
+        params: list[object] = []
+        if athlete_name:
+            query += " WHERE r.normalized_athlete_name=?"
+            params.append(normalize_name(athlete_name))
+        query += " ORDER BY r.captured_at DESC LIMIT ?"
+        params.append(limit)
+
+        rows = self.conn.execute(query, params).fetchall()
+        return [
+            TimelineResult(
+                captured_at=row["captured_at"],
+                meet_name=row["meet_name"],
+                session_name=row["session_name"],
+                event_name=row["event_name"],
+                athlete_name=row["athlete_name"],
+                club=row["club"],
+                time_text=row["time_text"],
+                source_url=row["source_url"],
+            )
+            for row in rows
+        ]

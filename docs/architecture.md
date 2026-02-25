@@ -12,6 +12,7 @@
 - `tracker.athletes`: manage followed athletes.
 - `tracker.sources`: load/list seed sources.
 - `tracker.run`: one-shot and watch scheduler.
+- `tracker.web`: local dashboard and HTTP API for athletes/sources/run/timeline.
 
 2. Storage (SQLite)
 - `athletes`: followed names.

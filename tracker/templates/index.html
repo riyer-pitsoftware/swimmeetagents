@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Swim Tracker Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fraunces:opsz,wght@9..144,300..700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="grain"></div>
+    <header class="hero">
+      <p class="eyebrow">Ontario Meet Tracker</p>
+      <h1>Pool Deck Control Room</h1>
+      <p class="subtitle">Public-source only. Low-frequency polling. Personal timeline intelligence for your swimmers.</p>
+      <button id="refreshSources" class="cta">Refresh Sources</button>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Athletes</h2>
+        <form id="athleteForm" class="stack">
+          <input id="athleteName" placeholder="Athlete name" required />
+          <input id="athleteClub" placeholder="Club (optional)" />
+          <button type="submit">Add Athlete</button>
+        </form>
+        <ul id="athleteList" class="list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Run</h2>
+        <div class="stack">
+          <label class="toggle"><input id="dryRun" type="checkbox" checked /> Dry run (no DB writes)</label>
+          <button id="runOnce">Run Once</button>
+          <p id="runStatus" class="status">Idle</p>
+        </div>
+      </section>
+
+      <section class="card wide">
+        <h2>Seed Sources</h2>
+        <ul id="sourceList" class="list dense"></ul>
+      </section>
+
+      <section class="card wide">
+        <h2>Timeline</h2>
+        <div class="toolbar">
+          <input id="filterAthlete" placeholder="Filter athlete" />
+          <button id="loadResults">Reload</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>When</th><th>Athlete</th><th>Event</th><th>Time</th><th>Meet</th><th>Source</th></tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

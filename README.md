@@ -59,6 +59,23 @@ python -m tracker.run --watch
 python -m tracker.run --watch --source-url https://example.com/public-results.pdf
 ```
 
+Web dashboard + API:
+
+```bash
+python -m tracker.web
+```
+
+Then open `http://127.0.0.1:8787`.
+
+Main API endpoints:
+- `GET /api/athletes`
+- `POST /api/athletes`
+- `DELETE /api/athletes/<name>`
+- `GET /api/sources`
+- `POST /api/sources/refresh`
+- `POST /api/run/once`
+- `GET /api/results?athlete=<name>&limit=100`
+
 ## Data Model
 
 Normalized schema includes:
