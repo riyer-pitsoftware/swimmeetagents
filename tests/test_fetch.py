@@ -1,3 +1,5 @@
+from urllib.request import Request
+
 import pytest
 
 import tracker.fetch as fetch
@@ -5,6 +7,7 @@ from tracker.fetch import (
     BlockedTargetError,
     FetchTooLargeError,
     _read_with_limit,
+    _SafeRedirectHandler,
     classify_fetch_error,
     is_target_blocked,
 )
@@ -57,7 +60,7 @@ def test_robots_check_blocks_when_robots_unavailable(monkeypatch) -> None:
     def _fail(*args, **kwargs):
         raise RuntimeError("network-down")
 
-    monkeypatch.setattr(fetch, "urlopen", _fail)
+    monkeypatch.setattr(fetch, "_open_with_safe_redirects", _fail)
     allowed, reason = fetch.robots_check("https://example.com/path", "ua", 1)
     assert not allowed
     assert reason == "robots_unavailable:RuntimeError"
@@ -66,7 +69,7 @@ def test_robots_check_blocks_when_robots_unavailable(monkeypatch) -> None:
 def test_robots_check_respects_disallow(monkeypatch) -> None:
     monkeypatch.setattr(
         fetch,
-        "urlopen",
+        "_open_with_safe_redirects",
         lambda *args, **kwargs: _FakeCtxResp("User-agent: *\nDisallow: /\n"),
     )
     allowed, reason = fetch.robots_check("https://example.com/path", "ua", 1)
@@ -103,3 +106,21 @@ def test_classify_fetch_blocked_target() -> None:
     err, code = classify_fetch_error(BlockedTargetError("http://localhost", "local"))
     assert err == "target_blocked:local"
     assert code is None
+
+
+def test_redirect_handler_blocks_unsafe_redirect(monkeypatch) -> None:
+    monkeypatch.setattr(fetch, "is_target_blocked", lambda u: (True, "private_ip_blocked"))
+    handler = _SafeRedirectHandler()
+    req = Request("https://example.com/start")
+    with pytest.raises(BlockedTargetError) as exc:
+        handler.redirect_request(req, None, 302, "Found", {}, "https://10.0.0.5/next")
+    assert exc.value.reason == "redirect_private_ip_blocked"
+
+
+def test_redirect_handler_allows_safe_redirect(monkeypatch) -> None:
+    monkeypatch.setattr(fetch, "is_target_blocked", lambda u: (False, None))
+    handler = _SafeRedirectHandler()
+    req = Request("https://example.com/start")
+    redirected = handler.redirect_request(req, None, 302, "Found", {}, "https://example.com/next")
+    assert redirected is not None
+    assert redirected.full_url == "https://example.com/next"

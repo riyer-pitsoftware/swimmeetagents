@@ -5,7 +5,7 @@ import socket
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 from urllib.robotparser import RobotFileParser
 
 BLOCKED_HOST_SUBSTRINGS = ("meetmobile",)
@@ -75,7 +75,7 @@ def robots_check(url: str, user_agent: str, timeout_seconds: int) -> tuple[bool,
     rp = RobotFileParser()
     try:
         req = Request(robots_url, headers={"User-Agent": user_agent})
-        with urlopen(req, timeout=timeout_seconds) as resp:  # nosec B310
+        with _open_with_safe_redirects(req, timeout_seconds=timeout_seconds) as resp:  # nosec B310
             data = resp.read().decode("utf-8", errors="replace")
             rp.parse(data.splitlines())
     except Exception as exc:
@@ -94,7 +94,7 @@ def fetch_url(url: str, user_agent: str, timeout_seconds: int, max_bytes: int) -
         raise BlockedTargetError(url=url, reason=reason or "blocked_target")
 
     req = Request(url, headers={"User-Agent": user_agent})
-    with urlopen(req, timeout=timeout_seconds) as resp:  # nosec B310
+    with _open_with_safe_redirects(req, timeout_seconds=timeout_seconds) as resp:  # nosec B310
         content_type = resp.headers.get("Content-Type", "application/octet-stream")
         body = _read_with_limit(resp, max_bytes=max_bytes)
         return FetchResponse(
@@ -154,3 +154,18 @@ def _block_reason_for_ip_literal(host: str) -> tuple[bool, str | None]:
     if ip.is_unspecified:
         return (True, "unspecified_ip_blocked")
     return (False, None)
+
+
+class _SafeRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _is_http_scheme(newurl):
+            raise BlockedTargetError(newurl, "redirect_unsupported_scheme")
+        blocked, reason = is_target_blocked(newurl)
+        if blocked:
+            raise BlockedTargetError(newurl, f"redirect_{reason}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _open_with_safe_redirects(req: Request, timeout_seconds: int):
+    opener = build_opener(_SafeRedirectHandler())
+    return opener.open(req, timeout=timeout_seconds)
