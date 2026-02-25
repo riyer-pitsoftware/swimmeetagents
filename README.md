@@ -93,14 +93,14 @@ Main API endpoints:
 ## Quality Gates
 
 ```bash
-python -m pip install -e .[dev]
-python -m pytest -q
-python -m compileall -q tracker tests
-python -c "import tracker.sources, tracker.adapters.swim_ontario, tracker.adapters.generic_pdf"
-ruff check tracker tests
-ruff format --check tracker tests
-bandit -q -r tracker
-pip-audit -r requirements-audit.txt
+uv sync --extra dev
+uv run pytest -q
+uv run python -m compileall -q tracker tests
+uv run python -c "import tracker.sources, tracker.adapters.swim_ontario, tracker.adapters.generic_pdf"
+uv run ruff check tracker tests
+uv run ruff format --check tracker tests
+uv run bandit -q -r tracker
+uv run pip-audit
 docker compose config
 ```
 

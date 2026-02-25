@@ -15,7 +15,8 @@ COPY tracker /app/tracker
 COPY docs /app/docs
 COPY sources.md /app/sources.md
 
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
+RUN pip install --no-cache-dir --upgrade pip uv \
+    && uv pip install --system --no-cache .
 
 RUN mkdir -p /app/data
 
