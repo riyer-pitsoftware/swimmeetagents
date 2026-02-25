@@ -135,7 +135,12 @@ def create_app() -> Flask:
                         ),
                     }
                 )
-            return jsonify({"results": response})
+            return jsonify(
+                {
+                    "results": response,
+                    "personal_best_semantics": "tie_inclusive_all_time_best",
+                }
+            )
         finally:
             db.close()
 

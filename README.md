@@ -89,6 +89,8 @@ Main API endpoints:
 - `POST /api/sources/refresh`
 - `POST /api/run/once`
 - `GET /api/results?athlete=<name>&limit=100`
+  - response includes `personal_best` per row (tie-inclusive: `true` when time equals or beats all-time best for that athlete+event name)
+  - response includes `personal_best_semantics: "tie_inclusive_all_time_best"`
 
 ## Quality Gates
 

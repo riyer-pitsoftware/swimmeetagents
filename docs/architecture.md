@@ -50,6 +50,7 @@
 - optional one-level discovery of linked result files
 - write results (unless `--dry-run`)
 4. Print timeline and PB signals.
+5. Timeline/API PB semantics are tie-inclusive all-time best (`personal_best=true` when a swim equals the best recorded time for the athlete+event name).
 
 ## Scheduling & Backoff
 
