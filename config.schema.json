@@ -9,6 +9,11 @@
     "TRACKER_MIN_POLL_SECONDS": {"type": "integer", "minimum": 600},
     "TRACKER_MAX_BACKOFF_SECONDS": {"type": "integer", "minimum": 600},
     "TRACKER_HTTP_TIMEOUT_SECONDS": {"type": "integer", "minimum": 1},
+    "TRACKER_MAX_DOWNLOAD_BYTES": {
+      "type": "integer",
+      "minimum": 1024,
+      "description": "Max HTTP body size in bytes before fetch is aborted"
+    },
     "TRACKER_USER_AGENT": {"type": "string", "minLength": 1}
   },
   "required": [

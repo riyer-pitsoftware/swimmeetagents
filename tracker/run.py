@@ -10,7 +10,7 @@ from tracker.adapters import build_adapters
 from tracker.adapters.base import AdapterInput
 from tracker.config import AppConfig
 from tracker.db import Database
-from tracker.fetch import classify_fetch_error, fetch_url, is_domain_blocked, robots_allow
+from tracker.fetch import classify_fetch_error, fetch_url, is_domain_blocked, robots_check
 from tracker.runtime_guard import require_container_runtime
 from tracker.sources import parse_sources_markdown
 from tracker.types import ParsedResult
@@ -68,13 +68,21 @@ def _process_url(
         print(f"skip blocked domain: {source_url}")
         return {"inserted": 0, "parsed": 0, "errors": 1, "blocked": 1, "no_adapter": 0}
 
-    if not robots_allow(source_url, config.user_agent, config.http_timeout_seconds):
-        db.log_fetch(source_url, status="blocked", error="robots_disallow")
-        print(f"skip robots-disallowed: {source_url}")
+    robots_allowed, robots_reason = robots_check(
+        source_url, config.user_agent, config.http_timeout_seconds
+    )
+    if not robots_allowed:
+        db.log_fetch(source_url, status="blocked", error=robots_reason or "robots_blocked")
+        print(f"skip robots-blocked: {source_url} reason={robots_reason}")
         return {"inserted": 0, "parsed": 0, "errors": 1, "blocked": 1, "no_adapter": 0}
 
     try:
-        resp = fetch_url(source_url, config.user_agent, config.http_timeout_seconds)
+        resp = fetch_url(
+            source_url,
+            config.user_agent,
+            config.http_timeout_seconds,
+            config.max_download_bytes,
+        )
     except Exception as exc:
         err, code = classify_fetch_error(exc)
         db.log_fetch(source_url, status="error", http_status=code, error=err)
@@ -101,7 +109,12 @@ def _process_url(
         if urlparse(child).scheme not in ("http", "https"):
             continue
         try:
-            c_resp = fetch_url(child, config.user_agent, config.http_timeout_seconds)
+            c_resp = fetch_url(
+                child,
+                config.user_agent,
+                config.http_timeout_seconds,
+                config.max_download_bytes,
+            )
             c_adapter = choose_adapter(child, c_resp.content_type, c_resp.body)
             if c_adapter is None:
                 continue
