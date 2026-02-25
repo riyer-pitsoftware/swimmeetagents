@@ -13,10 +13,8 @@ from tracker.db import Database
 from tracker.fetch import (
     classify_fetch_error,
     fetch_url,
-    is_domain_blocked,
-    is_target_blocked,
-    robots_check,
 )
+from tracker.policy import evaluate_child_policy, evaluate_source_policy
 from tracker.runtime_guard import require_container_runtime
 from tracker.sources import parse_sources_markdown
 from tracker.types import ParsedResult
@@ -69,17 +67,16 @@ def _process_url(
     dry_run: bool,
 ) -> dict[str, int]:
     print(f"processing source: {source_url}")
-    if is_domain_blocked(source_url):
-        db.log_fetch(source_url, status="blocked", error="domain_blocked")
-        print(f"skip blocked domain: {source_url}")
-        return {"inserted": 0, "parsed": 0, "errors": 1, "blocked": 1, "no_adapter": 0}
-
-    robots_allowed, robots_reason = robots_check(
+    source_policy = evaluate_source_policy(
         source_url, config.user_agent, config.http_timeout_seconds
     )
-    if not robots_allowed:
-        db.log_fetch(source_url, status="blocked", error=robots_reason or "robots_blocked")
-        print(f"skip robots-blocked: {source_url} reason={robots_reason}")
+    if not source_policy.allowed:
+        db.log_fetch(
+            source_url,
+            status="blocked",
+            error=source_policy.reason or "policy_blocked",
+        )
+        print(f"skip source by policy: {source_url} reason={source_policy.reason}")
         return {"inserted": 0, "parsed": 0, "errors": 1, "blocked": 1, "no_adapter": 0}
 
     try:
@@ -114,10 +111,10 @@ def _process_url(
     for child in adapter.discover_urls(payload)[:8]:
         if urlparse(child).scheme not in ("http", "https"):
             continue
-        blocked, reason = is_target_blocked(child)
-        if blocked:
-            db.log_fetch(child, status="blocked", error=reason or "blocked_target")
-            print(f"skip blocked child target: {child} reason={reason}")
+        child_policy = evaluate_child_policy(child)
+        if not child_policy.allowed:
+            db.log_fetch(child, status="blocked", error=child_policy.reason or "blocked_target")
+            print(f"skip blocked child target: {child} reason={child_policy.reason}")
             continue
         try:
             c_resp = fetch_url(
