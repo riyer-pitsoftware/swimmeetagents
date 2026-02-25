@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from urllib.parse import urlparse, urljoin
-from urllib.robotparser import RobotFileParser
-from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
+from urllib.parse import urljoin, urlparse
+from urllib.request import Request, urlopen
+from urllib.robotparser import RobotFileParser
 
-
-BLOCKED_HOST_SUBSTRINGS = (
-    "meetmobile",
-)
+BLOCKED_HOST_SUBSTRINGS = ("meetmobile",)
 
 
 @dataclass(frozen=True)
@@ -31,15 +28,16 @@ def is_domain_blocked(url: str) -> bool:
     return any(bad in host for bad in BLOCKED_HOST_SUBSTRINGS)
 
 
-def robots_check(
-    url: str, user_agent: str, timeout_seconds: int
-) -> tuple[bool, str | None]:
+def robots_check(url: str, user_agent: str, timeout_seconds: int) -> tuple[bool, str | None]:
+    if not _is_http_scheme(url):
+        return (False, "unsupported_scheme")
+
     parsed = urlparse(url)
     robots_url = urljoin(f"{parsed.scheme}://{parsed.netloc}", "/robots.txt")
     rp = RobotFileParser()
     try:
         req = Request(robots_url, headers={"User-Agent": user_agent})
-        with urlopen(req, timeout=timeout_seconds) as resp:
+        with urlopen(req, timeout=timeout_seconds) as resp:  # nosec B310
             data = resp.read().decode("utf-8", errors="replace")
             rp.parse(data.splitlines())
     except Exception as exc:
@@ -50,11 +48,11 @@ def robots_check(
     return (True, None)
 
 
-def fetch_url(
-    url: str, user_agent: str, timeout_seconds: int, max_bytes: int
-) -> FetchResponse:
+def fetch_url(url: str, user_agent: str, timeout_seconds: int, max_bytes: int) -> FetchResponse:
+    if not _is_http_scheme(url):
+        raise ValueError("unsupported URL scheme")
     req = Request(url, headers={"User-Agent": user_agent})
-    with urlopen(req, timeout=timeout_seconds) as resp:
+    with urlopen(req, timeout=timeout_seconds) as resp:  # nosec B310
         content_type = resp.headers.get("Content-Type", "application/octet-stream")
         body = _read_with_limit(resp, max_bytes=max_bytes)
         return FetchResponse(
@@ -87,3 +85,7 @@ def _read_with_limit(resp, max_bytes: int) -> bytes:
             raise FetchTooLargeError(max_bytes=max_bytes)
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+def _is_http_scheme(url: str) -> bool:
+    return urlparse(url).scheme in ("http", "https")

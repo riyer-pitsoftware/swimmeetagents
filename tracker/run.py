@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import time
 from dataclasses import dataclass
 from datetime import datetime
-import time
 from urllib.parse import urlparse
 
 from tracker.adapters import build_adapters
@@ -14,7 +14,7 @@ from tracker.fetch import classify_fetch_error, fetch_url, is_domain_blocked, ro
 from tracker.runtime_guard import require_container_runtime
 from tracker.sources import parse_sources_markdown
 from tracker.types import ParsedResult
-from tracker.util import normalize_name, parse_swim_time_to_centiseconds
+from tracker.util import parse_swim_time_to_centiseconds
 
 
 @dataclass
@@ -126,8 +126,8 @@ def _process_url(
                 fetched_at=datetime.utcnow(),
             )
             parsed_results.extend(c_adapter.parse_results(child_payload, followed))
-        except Exception:
-            continue
+        except Exception as exc:
+            print(f"child fetch/parse skipped for {child}: {type(exc).__name__}")
 
     if dry_run:
         _print_timeline(db, parsed_results)
@@ -166,7 +166,7 @@ def run_once_with_summary(
 ) -> RunSummary:
     followed = {a.normalized_name for a in db.list_athletes()}
     if not followed:
-        print("no athletes configured; add with: python -m tracker.athletes add \"Name\"")
+        print('no athletes configured; add with: python -m tracker.athletes add "Name"')
         return RunSummary(
             exit_code=2,
             dry_run=dry_run,
@@ -233,13 +233,17 @@ def run_watch(db: Database, config: AppConfig, extra_urls: list[str], dry_run: b
             errs = stats["errors"]
             if errs:
                 state.error_count += 1
-                delay = min(config.max_backoff_seconds, config.poll_seconds * (2 ** state.error_count))
+                delay = min(
+                    config.max_backoff_seconds, config.poll_seconds * (2**state.error_count)
+                )
                 state.next_allowed_epoch = time.time() + delay
                 db.log_fetch(source_url, status="backoff", backoff_seconds=delay)
             else:
                 state.error_count = 0
                 state.next_allowed_epoch = time.time() + config.poll_seconds
-            print(f"source={source_url} inserted={inserted} next_check_in={int(state.next_allowed_epoch-time.time())}s")
+            print(
+                f"source={source_url} inserted={inserted} next_check_in={int(state.next_allowed_epoch - time.time())}s"
+            )
         time.sleep(2)
 
 
@@ -249,8 +253,12 @@ def main(argv: list[str] | None = None) -> int:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--once", action="store_true")
     mode.add_argument("--watch", action="store_true")
-    parser.add_argument("--dry-run", action="store_true", help="parse and print results without DB writes")
-    parser.add_argument("--source-url", action="append", default=[], help="additional custom source URL")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="parse and print results without DB writes"
+    )
+    parser.add_argument(
+        "--source-url", action="append", default=[], help="additional custom source URL"
+    )
 
     args = parser.parse_args(argv)
     config = AppConfig.load()

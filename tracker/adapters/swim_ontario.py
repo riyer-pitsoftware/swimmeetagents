@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from html.parser import HTMLParser
 from urllib.parse import urljoin
-import re
 
 from tracker.adapters.base import Adapter, AdapterInput
 from tracker.pdftext import extract_pdf_text
@@ -38,7 +38,11 @@ class SwimOntarioAdapter(Adapter):
         discovered: list[str] = []
         for href in parser.links:
             candidate = urljoin(payload.fetched_url, href)
-            if candidate.endswith(".pdf") or "ResultList_" in candidate or "results" in candidate.lower():
+            if (
+                candidate.endswith(".pdf")
+                or "ResultList_" in candidate
+                or "results" in candidate.lower()
+            ):
                 discovered.append(candidate)
         return sorted(set(discovered))
 

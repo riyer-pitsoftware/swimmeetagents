@@ -1,3 +1,5 @@
+import pytest
+
 from tracker.fetch import FetchTooLargeError, _read_with_limit, classify_fetch_error
 
 
@@ -13,11 +15,9 @@ class _FakeResp:
 
 def test_read_with_limit_raises_when_too_large() -> None:
     resp = _FakeResp([b"a" * 8, b"b" * 8])
-    try:
+    with pytest.raises(FetchTooLargeError) as exc:
         _read_with_limit(resp, max_bytes=10)
-        assert False, "expected FetchTooLargeError"
-    except FetchTooLargeError as exc:
-        assert exc.max_bytes == 10
+    assert exc.value.max_bytes == 10
 
 
 def test_classify_fetch_too_large() -> None:

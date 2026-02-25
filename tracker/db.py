@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-import sqlite3
 
 from tracker.types import ParsedResult, SeedSource
 from tracker.util import normalize_name, parse_swim_time_to_centiseconds
-
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS athletes (
@@ -153,9 +152,7 @@ class Database:
     def remove_athlete(self, name: str) -> int:
         normalized = normalize_name(name)
         with self.conn:
-            cur = self.conn.execute(
-                "DELETE FROM athletes WHERE normalized_name=?", (normalized,)
-            )
+            cur = self.conn.execute("DELETE FROM athletes WHERE normalized_name=?", (normalized,))
             return cur.rowcount
 
     def list_athletes(self) -> list[FollowedAthlete]:
@@ -233,7 +230,8 @@ class Database:
         row = self.conn.execute(
             "SELECT id FROM meets WHERE name=? AND source_url=?", (name, source_url)
         ).fetchone()
-        assert row is not None
+        if row is None:
+            raise RuntimeError("failed to resolve meet row after insert")
         return int(row["id"])
 
     def _upsert_session(self, meet_id: int, name: str) -> int:
@@ -243,7 +241,8 @@ class Database:
         row = self.conn.execute(
             "SELECT id FROM sessions WHERE meet_id=? AND name=?", (meet_id, name)
         ).fetchone()
-        assert row is not None
+        if row is None:
+            raise RuntimeError("failed to resolve session row after insert")
         return int(row["id"])
 
     def _upsert_event(self, session_id: int, name: str) -> int:
@@ -254,7 +253,8 @@ class Database:
         row = self.conn.execute(
             "SELECT id FROM events WHERE session_id=? AND name=?", (session_id, name)
         ).fetchone()
-        assert row is not None
+        if row is None:
+            raise RuntimeError("failed to resolve event row after insert")
         return int(row["id"])
 
     def latest_personal_best(self, athlete_name: str, event_name: str) -> int | None:

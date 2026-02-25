@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
 import re
+from datetime import datetime
 
 from tracker.adapters.base import Adapter, AdapterInput
 from tracker.pdftext import extract_pdf_text

@@ -4,10 +4,12 @@ import re
 
 
 def extract_pdf_text(data: bytes) -> str:
+    text = ""
     # Try pypdf when available; fall back to lightweight extraction.
     try:
-        from pypdf import PdfReader  # type: ignore
         from io import BytesIO
+
+        from pypdf import PdfReader  # type: ignore
 
         reader = PdfReader(BytesIO(data))
         pieces = []
@@ -17,7 +19,7 @@ def extract_pdf_text(data: bytes) -> str:
         if text:
             return text
     except Exception:
-        pass
+        text = ""
 
     raw = data.decode("latin-1", errors="ignore")
     chunks = re.findall(r"\(([^\)]{1,300})\)", raw)

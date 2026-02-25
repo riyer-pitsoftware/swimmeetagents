@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
-import os
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class AppConfig:
     user_agent: str = "swim-tracker-personal/0.1 (+local personal use)"
 
     @classmethod
-    def load(cls) -> "AppConfig":
+    def load(cls) -> AppConfig:
         db_path = Path(os.getenv("TRACKER_DB_PATH", ".data/tracker.db"))
         sources_file = Path(os.getenv("TRACKER_SOURCES_FILE", "./sources.md"))
         poll_seconds = int(os.getenv("TRACKER_POLL_SECONDS", "900"))

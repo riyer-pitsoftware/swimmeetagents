@@ -89,6 +89,18 @@ Main API endpoints:
 - `POST /api/run/once`
 - `GET /api/results?athlete=<name>&limit=100`
 
+## Quality Gates
+
+```bash
+python -m pip install -e .[dev]
+python -m pytest -q
+ruff check tracker tests
+ruff format --check tracker tests
+bandit -q -r tracker
+pip-audit -r requirements-audit.txt
+docker compose config
+```
+
 ## Data Model
 
 Normalized schema includes:
