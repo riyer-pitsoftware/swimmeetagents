@@ -25,6 +25,11 @@ jobs:
       - name: Run tests
         run: python -m pytest -q
 
+      - name: Compile and import smoke checks
+        run: |
+          python -m compileall -q tracker tests
+          python -c "import tracker.sources, tracker.adapters.swim_ontario, tracker.adapters.generic_pdf"
+
       - name: Lint (ruff)
         run: |
           ruff check tracker tests

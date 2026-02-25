@@ -94,6 +94,8 @@ Main API endpoints:
 ```bash
 python -m pip install -e .[dev]
 python -m pytest -q
+python -m compileall -q tracker tests
+python -c "import tracker.sources, tracker.adapters.swim_ontario, tracker.adapters.generic_pdf"
 ruff check tracker tests
 ruff format --check tracker tests
 bandit -q -r tracker
