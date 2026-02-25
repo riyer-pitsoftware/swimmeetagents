@@ -34,6 +34,7 @@
 - `tracker.fetch`:
   - robots.txt allow-check before fetch
   - blocked-domain guard for restricted ecosystems
+  - block non-standard outbound ports (allow only 80/443)
   - user-agent and timeout controls
 - No login, no private endpoint reverse engineering.
 - `tracker.runtime_guard` blocks host execution unless running inside Docker.

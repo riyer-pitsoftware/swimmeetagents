@@ -44,6 +44,11 @@ def is_target_blocked(url: str) -> tuple[bool, str | None]:
         return (True, "missing_host")
     if host in {"localhost", "localhost.localdomain"} or host.endswith(".local"):
         return (True, "local_hostname_blocked")
+    if parsed.port is not None:
+        if parsed.scheme == "http" and parsed.port != 80:
+            return (True, "non_standard_port_blocked")
+        if parsed.scheme == "https" and parsed.port != 443:
+            return (True, "non_standard_port_blocked")
 
     blocked, reason = _block_reason_for_ip_literal(host)
     if blocked:

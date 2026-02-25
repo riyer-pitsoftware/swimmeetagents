@@ -89,6 +89,18 @@ def test_target_blocked_for_private_ip() -> None:
     assert reason == "private_ip_blocked"
 
 
+def test_target_blocked_for_non_standard_port() -> None:
+    blocked, reason = is_target_blocked("https://example.com:8443/path")
+    assert blocked
+    assert reason == "non_standard_port_blocked"
+
+
+def test_target_allows_standard_https_port() -> None:
+    blocked, reason = is_target_blocked("https://example.com:443/path")
+    assert not blocked
+    assert reason is None
+
+
 def test_target_blocked_for_resolved_private_ip(monkeypatch) -> None:
     monkeypatch.setattr(
         fetch.socket,
