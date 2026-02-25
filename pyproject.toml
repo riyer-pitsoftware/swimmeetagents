@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "swim-tracker"
+version = "0.1.0"
+description = "Personal Ontario swim meet tracker"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools]
+packages = ["tracker", "tracker.adapters"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

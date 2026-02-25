@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Swim Tracker Config",
+  "type": "object",
+  "properties": {
+    "TRACKER_DB_PATH": {"type": "string", "description": "SQLite file path"},
+    "TRACKER_SOURCES_FILE": {"type": "string", "description": "Path to canonical sources markdown file"},
+    "TRACKER_POLL_SECONDS": {"type": "integer", "minimum": 600, "description": "Default watch interval; must remain >= 10 minutes"},
+    "TRACKER_MIN_POLL_SECONDS": {"type": "integer", "minimum": 600},
+    "TRACKER_MAX_BACKOFF_SECONDS": {"type": "integer", "minimum": 600},
+    "TRACKER_HTTP_TIMEOUT_SECONDS": {"type": "integer", "minimum": 1},
+    "TRACKER_USER_AGENT": {"type": "string", "minLength": 1}
+  },
+  "required": [
+    "TRACKER_DB_PATH",
+    "TRACKER_SOURCES_FILE"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "jsonl_export": "issues.jsonl",
+  "backend": "jsonl",
+  "dolt_server_port": 4307,
+  "dolt_database": "beads_swim"
+}
