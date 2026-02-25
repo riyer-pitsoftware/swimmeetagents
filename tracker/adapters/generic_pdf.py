@@ -8,6 +8,13 @@ from tracker.pdftext import extract_pdf_text
 from tracker.types import ParsedResult
 from tracker.util import normalize_name
 
+EVENT_LINE_RE = re.compile(r"(?:Event|EVENT)\s*\d+\s*[-:]?\s*(.+)$")
+RESULT_LINE_RE = re.compile(
+    r"^(?P<name>[A-Za-z ,.'-]{3,}?)\s+"
+    r"(?:(?P<club>[A-Z]{2,6})\s+)?"
+    r"(?P<time>(?:\d+:)?\d{1,2}\.\d{2})\s*$"
+)
+
 
 class GenericPdfResultsAdapter(Adapter):
     name = "generic_pdf_results"
@@ -43,21 +50,16 @@ def parse_generic_pdf_text(
     event_name = "Unknown Event"
     results: list[ParsedResult] = []
 
-    event_re = re.compile(r"(?:Event|EVENT)\s*\d+\s*[-:]?\s*(.+)$")
-    line_re = re.compile(
-        r"^(?P<name>[A-Za-z ,.'-]{3,}?)\s+(?:(?P<club>[A-Z]{2,6})\s+)?(?P<time>(?:\d+:)?\d{1,2}\.\d{2})\s*$"
-    )
-
     for raw in text.splitlines():
         line = raw.strip()
         if not line:
             continue
-        ev = event_re.search(line)
+        ev = EVENT_LINE_RE.search(line)
         if ev:
             event_name = ev.group(1).strip()
             continue
 
-        row = line_re.match(line)
+        row = RESULT_LINE_RE.match(line)
         if not row:
             continue
 
