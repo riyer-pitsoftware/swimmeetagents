@@ -160,6 +160,7 @@ th {
 
 .status { color: var(--ink-soft); margin: 0; }
 .toggle { color: var(--ink-soft); }
+.hint { color: var(--ink-soft); margin: 0; font-size: 0.8rem; }
 
 @media (max-width: 880px) {
   .layout { grid-template-columns: 1fr; }

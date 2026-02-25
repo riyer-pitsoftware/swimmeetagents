@@ -95,7 +95,12 @@ async function init() {
       method: "POST",
       body: JSON.stringify({ dry_run }),
     });
-    status.textContent = `Finished (exit=${result.exit_code})`;
+    const s = result.summary || {};
+    status.textContent =
+      `Finished (exit=${result.exit_code}) ` +
+      `sources=${s.source_count ?? 0}, parsed=${s.parsed_count ?? 0}, ` +
+      `inserted=${s.inserted_count ?? 0}, no-adapter=${s.no_adapter_count ?? 0}, errors=${s.error_count ?? 0}` +
+      (dry_run ? " [dry-run]" : "");
     await loadResults();
   });
 

@@ -8,7 +8,7 @@ from flask import Flask, jsonify, render_template, request
 from tracker.config import AppConfig
 from tracker.db import Database
 from tracker.runtime_guard import require_container_runtime
-from tracker.run import run_once
+from tracker.run import run_once_with_summary
 from tracker.sources import parse_sources_markdown
 from tracker.util import parse_swim_time_to_centiseconds
 
@@ -91,15 +91,23 @@ def create_app() -> Flask:
     def run_once_api():
         config = AppConfig.load()
         payload = request.get_json(silent=True) or {}
-        dry_run = bool(payload.get("dry_run", True))
+        dry_run = bool(payload.get("dry_run", False))
         extra_urls = payload.get("source_urls") or []
         if not isinstance(extra_urls, list):
             return jsonify({"error": "source_urls must be an array"}), 400
 
         db = _db()
         try:
-            exit_code = run_once(db, config, [str(v) for v in extra_urls], dry_run=dry_run)
-            return jsonify({"ok": exit_code == 0, "exit_code": exit_code})
+            summary = run_once_with_summary(
+                db, config, [str(v) for v in extra_urls], dry_run=dry_run
+            )
+            return jsonify(
+                {
+                    "ok": summary.exit_code == 0,
+                    "exit_code": summary.exit_code,
+                    "summary": asdict(summary),
+                }
+            )
         finally:
             db.close()
 
@@ -137,7 +145,7 @@ def create_app() -> Flask:
 def main() -> int:
     require_container_runtime()
     app = create_app()
-    app.run(host="127.0.0.1", port=8787, debug=False)
+    app.run(host="0.0.0.0", port=8787, debug=False)
     return 0
 
 

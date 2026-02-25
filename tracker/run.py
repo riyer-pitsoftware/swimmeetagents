@@ -23,6 +23,18 @@ class SourceState:
     next_allowed_epoch: float = 0.0
 
 
+@dataclass
+class RunSummary:
+    exit_code: int
+    dry_run: bool
+    source_count: int
+    parsed_count: int
+    inserted_count: int
+    error_count: int
+    blocked_count: int
+    no_adapter_count: int
+
+
 def choose_adapter(source_url: str, content_type: str, body: bytes):
     for adapter in build_adapters():
         if adapter.can_handle(source_url, content_type, body):
@@ -49,16 +61,17 @@ def _process_url(
     source_url: str,
     followed: set[str],
     dry_run: bool,
-) -> tuple[int, int]:
+) -> dict[str, int]:
+    print(f"processing source: {source_url}")
     if is_domain_blocked(source_url):
         db.log_fetch(source_url, status="blocked", error="domain_blocked")
         print(f"skip blocked domain: {source_url}")
-        return (0, 1)
+        return {"inserted": 0, "parsed": 0, "errors": 1, "blocked": 1, "no_adapter": 0}
 
     if not robots_allow(source_url, config.user_agent, config.http_timeout_seconds):
         db.log_fetch(source_url, status="blocked", error="robots_disallow")
         print(f"skip robots-disallowed: {source_url}")
-        return (0, 1)
+        return {"inserted": 0, "parsed": 0, "errors": 1, "blocked": 1, "no_adapter": 0}
 
     try:
         resp = fetch_url(source_url, config.user_agent, config.http_timeout_seconds)
@@ -66,7 +79,7 @@ def _process_url(
         err, code = classify_fetch_error(exc)
         db.log_fetch(source_url, status="error", http_status=code, error=err)
         print(f"fetch error for {source_url}: {err}")
-        return (0, 1)
+        return {"inserted": 0, "parsed": 0, "errors": 1, "blocked": 0, "no_adapter": 0}
 
     db.log_fetch(source_url, status="ok", http_status=resp.status_code)
     payload = AdapterInput(
@@ -79,7 +92,7 @@ def _process_url(
     adapter = choose_adapter(source_url, resp.content_type, resp.body)
     if adapter is None:
         print(f"no adapter for {source_url}")
-        return (0, 0)
+        return {"inserted": 0, "parsed": 0, "errors": 0, "blocked": 0, "no_adapter": 1}
 
     parsed_results = adapter.parse_results(payload, followed)
 
@@ -105,11 +118,23 @@ def _process_url(
 
     if dry_run:
         _print_timeline(db, parsed_results)
-        return (len(parsed_results), 0)
+        return {
+            "inserted": 0,
+            "parsed": len(parsed_results),
+            "errors": 0,
+            "blocked": 0,
+            "no_adapter": 0,
+        }
 
     inserted = db.insert_results(parsed_results)
     _print_timeline(db, parsed_results)
-    return (inserted, 0)
+    return {
+        "inserted": inserted,
+        "parsed": len(parsed_results),
+        "errors": 0,
+        "blocked": 0,
+        "no_adapter": 0,
+    }
 
 
 def _load_sources(db: Database, config: AppConfig, extra_urls: list[str]) -> list[str]:
@@ -120,22 +145,61 @@ def _load_sources(db: Database, config: AppConfig, extra_urls: list[str]) -> lis
     return sorted(set(urls))
 
 
-def run_once(db: Database, config: AppConfig, extra_urls: list[str], dry_run: bool) -> int:
+def run_once_with_summary(
+    db: Database,
+    config: AppConfig,
+    extra_urls: list[str],
+    dry_run: bool,
+) -> RunSummary:
     followed = {a.normalized_name for a in db.list_athletes()}
     if not followed:
         print("no athletes configured; add with: python -m tracker.athletes add \"Name\"")
-        return 2
+        return RunSummary(
+            exit_code=2,
+            dry_run=dry_run,
+            source_count=0,
+            parsed_count=0,
+            inserted_count=0,
+            error_count=1,
+            blocked_count=0,
+            no_adapter_count=0,
+        )
 
     sources = _load_sources(db, config, extra_urls)
     inserted_total = 0
+    parsed_total = 0
     errors_total = 0
+    blocked_total = 0
+    no_adapter_total = 0
     for source_url in sources:
-        inserted, errs = _process_url(db, config, source_url, followed, dry_run)
-        inserted_total += inserted
-        errors_total += errs
+        stats = _process_url(db, config, source_url, followed, dry_run)
+        inserted_total += stats["inserted"]
+        parsed_total += stats["parsed"]
+        errors_total += stats["errors"]
+        blocked_total += stats["blocked"]
+        no_adapter_total += stats["no_adapter"]
 
-    print(f"run complete: inserted={inserted_total} errors={errors_total} dry_run={dry_run}")
-    return 0 if errors_total == 0 else 1
+    exit_code = 0 if errors_total == 0 else 1
+    print(
+        "run complete:"
+        f" sources={len(sources)} parsed={parsed_total} inserted={inserted_total}"
+        f" no_adapter={no_adapter_total} blocked={blocked_total}"
+        f" errors={errors_total} dry_run={dry_run}"
+    )
+    return RunSummary(
+        exit_code=exit_code,
+        dry_run=dry_run,
+        source_count=len(sources),
+        parsed_count=parsed_total,
+        inserted_count=inserted_total,
+        error_count=errors_total,
+        blocked_count=blocked_total,
+        no_adapter_count=no_adapter_total,
+    )
+
+
+def run_once(db: Database, config: AppConfig, extra_urls: list[str], dry_run: bool) -> int:
+    return run_once_with_summary(db, config, extra_urls, dry_run).exit_code
 
 
 def run_watch(db: Database, config: AppConfig, extra_urls: list[str], dry_run: bool) -> int:
@@ -151,7 +215,9 @@ def run_watch(db: Database, config: AppConfig, extra_urls: list[str], dry_run: b
             state = states[source_url]
             if now < state.next_allowed_epoch:
                 continue
-            inserted, errs = _process_url(db, config, source_url, followed, dry_run)
+            stats = _process_url(db, config, source_url, followed, dry_run)
+            inserted = stats["inserted"]
+            errs = stats["errors"]
             if errs:
                 state.error_count += 1
                 delay = min(config.max_backoff_seconds, config.poll_seconds * (2 ** state.error_count))
