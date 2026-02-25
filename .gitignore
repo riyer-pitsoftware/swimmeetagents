@@ -208,3 +208,8 @@ __marimo__/
 
 # Beads tracking data
 .beads/
+.dolt/eventsData/dolt.lock
+.gitignore
+.dolt/config_global.json
+.data/tracker.db
+.dolt/eventsData/temp
