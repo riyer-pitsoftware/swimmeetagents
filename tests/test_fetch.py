@@ -1,7 +1,13 @@
 import pytest
 
 import tracker.fetch as fetch
-from tracker.fetch import FetchTooLargeError, _read_with_limit, classify_fetch_error
+from tracker.fetch import (
+    BlockedTargetError,
+    FetchTooLargeError,
+    _read_with_limit,
+    classify_fetch_error,
+    is_target_blocked,
+)
 
 
 class _FakeResp:
@@ -66,3 +72,34 @@ def test_robots_check_respects_disallow(monkeypatch) -> None:
     allowed, reason = fetch.robots_check("https://example.com/path", "ua", 1)
     assert not allowed
     assert reason == "robots_disallow"
+
+
+def test_target_blocked_for_localhost() -> None:
+    blocked, reason = is_target_blocked("http://localhost:8787/")
+    assert blocked
+    assert reason == "local_hostname_blocked"
+
+
+def test_target_blocked_for_private_ip() -> None:
+    blocked, reason = is_target_blocked("http://192.168.1.10/path")
+    assert blocked
+    assert reason == "private_ip_blocked"
+
+
+def test_target_blocked_for_resolved_private_ip(monkeypatch) -> None:
+    monkeypatch.setattr(
+        fetch.socket,
+        "getaddrinfo",
+        lambda *args, **kwargs: [
+            (fetch.socket.AF_INET, fetch.socket.SOCK_STREAM, 0, "", ("10.0.0.9", 0))
+        ],
+    )
+    blocked, reason = is_target_blocked("http://example.com/path")
+    assert blocked
+    assert reason == "resolved_private_ip_blocked"
+
+
+def test_classify_fetch_blocked_target() -> None:
+    err, code = classify_fetch_error(BlockedTargetError("http://localhost", "local"))
+    assert err == "target_blocked:local"
+    assert code is None

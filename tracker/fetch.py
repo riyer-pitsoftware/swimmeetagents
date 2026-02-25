@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ipaddress
+import socket
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
@@ -23,14 +25,50 @@ class FetchTooLargeError(Exception):
         super().__init__(f"response exceeded max allowed bytes: {max_bytes}")
 
 
+class BlockedTargetError(Exception):
+    def __init__(self, url: str, reason: str):
+        self.url = url
+        self.reason = reason
+        super().__init__(f"blocked target {url}: {reason}")
+
+
 def is_domain_blocked(url: str) -> bool:
     host = (urlparse(url).hostname or "").lower()
     return any(bad in host for bad in BLOCKED_HOST_SUBSTRINGS)
 
 
+def is_target_blocked(url: str) -> tuple[bool, str | None]:
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").strip().lower()
+    if not host:
+        return (True, "missing_host")
+    if host in {"localhost", "localhost.localdomain"} or host.endswith(".local"):
+        return (True, "local_hostname_blocked")
+
+    blocked, reason = _block_reason_for_ip_literal(host)
+    if blocked:
+        return (True, reason)
+
+    try:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except OSError:
+        # If DNS lookup fails, fetch path will report a fetch error.
+        return (False, None)
+
+    for info in infos:
+        addr = info[4][0]
+        blocked, reason = _block_reason_for_ip_literal(addr)
+        if blocked:
+            return (True, f"resolved_{reason}")
+    return (False, None)
+
+
 def robots_check(url: str, user_agent: str, timeout_seconds: int) -> tuple[bool, str | None]:
     if not _is_http_scheme(url):
         return (False, "unsupported_scheme")
+    blocked, reason = is_target_blocked(url)
+    if blocked:
+        return (False, reason)
 
     parsed = urlparse(url)
     robots_url = urljoin(f"{parsed.scheme}://{parsed.netloc}", "/robots.txt")
@@ -51,6 +89,10 @@ def robots_check(url: str, user_agent: str, timeout_seconds: int) -> tuple[bool,
 def fetch_url(url: str, user_agent: str, timeout_seconds: int, max_bytes: int) -> FetchResponse:
     if not _is_http_scheme(url):
         raise ValueError("unsupported URL scheme")
+    blocked, reason = is_target_blocked(url)
+    if blocked:
+        raise BlockedTargetError(url=url, reason=reason or "blocked_target")
+
     req = Request(url, headers={"User-Agent": user_agent})
     with urlopen(req, timeout=timeout_seconds) as resp:  # nosec B310
         content_type = resp.headers.get("Content-Type", "application/octet-stream")
@@ -64,6 +106,8 @@ def fetch_url(url: str, user_agent: str, timeout_seconds: int, max_bytes: int) -
 
 
 def classify_fetch_error(exc: Exception) -> tuple[str, int | None]:
+    if isinstance(exc, BlockedTargetError):
+        return (f"target_blocked:{exc.reason}", None)
     if isinstance(exc, FetchTooLargeError):
         return (f"too_large:{exc.max_bytes}", None)
     if isinstance(exc, HTTPError):
@@ -89,3 +133,24 @@ def _read_with_limit(resp, max_bytes: int) -> bytes:
 
 def _is_http_scheme(url: str) -> bool:
     return urlparse(url).scheme in ("http", "https")
+
+
+def _block_reason_for_ip_literal(host: str) -> tuple[bool, str | None]:
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return (False, None)
+
+    if ip.is_loopback:
+        return (True, "loopback_ip_blocked")
+    if ip.is_private:
+        return (True, "private_ip_blocked")
+    if ip.is_link_local:
+        return (True, "link_local_ip_blocked")
+    if ip.is_multicast:
+        return (True, "multicast_ip_blocked")
+    if ip.is_reserved:
+        return (True, "reserved_ip_blocked")
+    if ip.is_unspecified:
+        return (True, "unspecified_ip_blocked")
+    return (False, None)

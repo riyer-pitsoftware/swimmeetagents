@@ -8,6 +8,7 @@ Personal-use CLI tracker for Ontario swim meets. It follows selected athletes, i
 - Respect robots.txt for each fetch target.
 - Conservative source blocking: domains related to private/restricted endpoints (for example Meet Mobile) are blocked.
 - Conservative robots policy: if robots.txt cannot be fetched or parsed, source fetch is blocked.
+- SSRF hardening: blocks localhost, private/link-local/reserved IP targets (including DNS-resolved private targets).
 - Light traffic defaults:
   - watch mode polling defaults to 15 minutes (`TRACKER_POLL_SECONDS=900`)
   - minimum allowed polling is 10 minutes (`TRACKER_MIN_POLL_SECONDS=600`)

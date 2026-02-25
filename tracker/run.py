@@ -10,7 +10,13 @@ from tracker.adapters import build_adapters
 from tracker.adapters.base import AdapterInput
 from tracker.config import AppConfig
 from tracker.db import Database
-from tracker.fetch import classify_fetch_error, fetch_url, is_domain_blocked, robots_check
+from tracker.fetch import (
+    classify_fetch_error,
+    fetch_url,
+    is_domain_blocked,
+    is_target_blocked,
+    robots_check,
+)
 from tracker.runtime_guard import require_container_runtime
 from tracker.sources import parse_sources_markdown
 from tracker.types import ParsedResult
@@ -107,6 +113,11 @@ def _process_url(
     # Discover one-level children (light traffic).
     for child in adapter.discover_urls(payload)[:8]:
         if urlparse(child).scheme not in ("http", "https"):
+            continue
+        blocked, reason = is_target_blocked(child)
+        if blocked:
+            db.log_fetch(child, status="blocked", error=reason or "blocked_target")
+            print(f"skip blocked child target: {child} reason={reason}")
             continue
         try:
             c_resp = fetch_url(
