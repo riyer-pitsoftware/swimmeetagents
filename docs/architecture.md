@@ -5,6 +5,7 @@
 - Personal-use Ontario meet tracker.
 - Ingest only public pages/files that permit automation.
 - Use `sources.md` as canonical seed source list.
+- Enforce container-only runtime for all app entrypoints.
 
 ## Components
 
@@ -35,6 +36,7 @@
   - blocked-domain guard for restricted ecosystems
   - user-agent and timeout controls
 - No login, no private endpoint reverse engineering.
+- `tracker.runtime_guard` blocks host execution unless running inside Docker.
 
 ## Data Flow
 

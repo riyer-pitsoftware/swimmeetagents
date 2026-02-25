@@ -1,0 +1,16 @@
+.git
+.gitignore
+.venv
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+beads.db
+.beads
+.data
+.dolt
+heat_index
+s5-sat-am-1-1-_090837.pdf
+tests
+swim_tracker.egg-info

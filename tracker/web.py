@@ -7,6 +7,7 @@ from flask import Flask, jsonify, render_template, request
 
 from tracker.config import AppConfig
 from tracker.db import Database
+from tracker.runtime_guard import require_container_runtime
 from tracker.run import run_once
 from tracker.sources import parse_sources_markdown
 from tracker.util import parse_swim_time_to_centiseconds
@@ -134,6 +135,7 @@ def create_app() -> Flask:
 
 
 def main() -> int:
+    require_container_runtime()
     app = create_app()
     app.run(host="127.0.0.1", port=8787, debug=False)
     return 0

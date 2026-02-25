@@ -11,6 +11,7 @@ from tracker.adapters.base import AdapterInput
 from tracker.config import AppConfig
 from tracker.db import Database
 from tracker.fetch import classify_fetch_error, fetch_url, is_domain_blocked, robots_allow
+from tracker.runtime_guard import require_container_runtime
 from tracker.sources import parse_sources_markdown
 from tracker.types import ParsedResult
 from tracker.util import normalize_name, parse_swim_time_to_centiseconds
@@ -164,6 +165,7 @@ def run_watch(db: Database, config: AppConfig, extra_urls: list[str], dry_run: b
 
 
 def main(argv: list[str] | None = None) -> int:
+    require_container_runtime()
     parser = argparse.ArgumentParser(prog="python -m tracker.run")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--once", action="store_true")

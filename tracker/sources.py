@@ -6,6 +6,7 @@ from pathlib import Path
 
 from tracker.config import AppConfig
 from tracker.db import Database
+from tracker.runtime_guard import require_container_runtime
 from tracker.types import SeedSource
 
 LINE_RE = re.compile(r"\[(?P<tag>[^\]]+)\]\s+(?P<url>https?://\S+)")
@@ -44,6 +45,7 @@ def cmd_list(db: Database) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    require_container_runtime()
     parser = argparse.ArgumentParser(prog="python -m tracker.sources")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("list")

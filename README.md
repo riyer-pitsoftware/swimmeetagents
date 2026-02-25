@@ -24,13 +24,18 @@ Expected parse format per line:
 - `[tag] https://example.com/page`
 - trailing comments after `#` are ignored
 
-## Setup
+## Runtime Isolation
+
+This app is container-only.
+
+- Do not run `python -m tracker.*` on the host.
+- Entry points enforce a runtime guard and fail outside Docker.
+- Use Docker Compose commands below for all operations.
+
+## Setup (Docker Only)
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-cp .env.example .env
+docker compose build
 ```
 
 ## CLI
@@ -38,34 +43,40 @@ cp .env.example .env
 Manage followed athletes:
 
 ```bash
-python -m tracker.athletes add "First Last" --club VAC
-python -m tracker.athletes list
-python -m tracker.athletes remove "First Last"
+docker compose run --rm tracker-cli -m tracker.athletes add "First Last" --club VAC
+docker compose run --rm tracker-cli -m tracker.athletes list
+docker compose run --rm tracker-cli -m tracker.athletes remove "First Last"
 ```
 
 Seed source commands:
 
 ```bash
-python -m tracker.sources refresh
-python -m tracker.sources list
+docker compose run --rm tracker-cli -m tracker.sources refresh
+docker compose run --rm tracker-cli -m tracker.sources list
 ```
 
 Runner:
 
 ```bash
-python -m tracker.run --once
-python -m tracker.run --once --dry-run
-python -m tracker.run --watch
-python -m tracker.run --watch --source-url https://example.com/public-results.pdf
+docker compose run --rm tracker-cli -m tracker.run --once
+docker compose run --rm tracker-cli -m tracker.run --once --dry-run
+docker compose run --rm tracker-cli -m tracker.run --watch
+docker compose run --rm tracker-cli -m tracker.run --watch --source-url https://example.com/public-results.pdf
 ```
 
 Web dashboard + API:
 
 ```bash
-python -m tracker.web
+docker compose up -d tracker-web
 ```
 
 Then open `http://127.0.0.1:8787`.
+
+Stop web service:
+
+```bash
+docker compose down
+```
 
 Main API endpoints:
 - `GET /api/athletes`

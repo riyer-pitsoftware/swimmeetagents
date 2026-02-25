@@ -4,9 +4,11 @@ import argparse
 
 from tracker.config import AppConfig
 from tracker.db import Database
+from tracker.runtime_guard import require_container_runtime
 
 
 def main(argv: list[str] | None = None) -> int:
+    require_container_runtime()
     parser = argparse.ArgumentParser(prog="python -m tracker.athletes")
     sub = parser.add_subparsers(dest="command", required=True)
 

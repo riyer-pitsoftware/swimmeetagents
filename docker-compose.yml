@@ -1,0 +1,34 @@
+services:
+  tracker-web:
+    build: .
+    container_name: swim-tracker-web
+    ports:
+      - "8787:8787"
+    environment:
+      TRACKER_CONTAINER: "1"
+      TRACKER_DB_PATH: /app/data/tracker.db
+      TRACKER_SOURCES_FILE: /app/sources.md
+      TRACKER_POLL_SECONDS: "900"
+      TRACKER_MIN_POLL_SECONDS: "600"
+    volumes:
+      - tracker-data:/app/data
+      - ./sources.md:/app/sources.md:ro
+    restart: unless-stopped
+
+  tracker-cli:
+    build: .
+    container_name: swim-tracker-cli
+    environment:
+      TRACKER_CONTAINER: "1"
+      TRACKER_DB_PATH: /app/data/tracker.db
+      TRACKER_SOURCES_FILE: /app/sources.md
+      TRACKER_POLL_SECONDS: "900"
+      TRACKER_MIN_POLL_SECONDS: "600"
+    volumes:
+      - tracker-data:/app/data
+      - ./sources.md:/app/sources.md:ro
+    entrypoint: ["python"]
+    command: ["-m", "tracker.run", "--once", "--dry-run"]
+
+volumes:
+  tracker-data:
