@@ -117,6 +117,11 @@ class Database:
     ) -> None:
         now = datetime.utcnow().isoformat()
         with self.conn:
+            if deactivate_missing:
+                self.conn.execute(
+                    "UPDATE seed_sources SET active=0, updated_at=?",
+                    (now,),
+                )
             for src in sources:
                 self.conn.execute(
                     """
@@ -129,23 +134,6 @@ class Database:
                     """,
                     (src.tag, src.url, now),
                 )
-            if deactivate_missing:
-                urls = [src.url for src in sources]
-                if urls:
-                    placeholders = ",".join("?" for _ in urls)
-                    self.conn.execute(
-                        f"""
-                        UPDATE seed_sources
-                        SET active=0, updated_at=?
-                        WHERE url NOT IN ({placeholders})
-                        """,
-                        (now, *urls),
-                    )
-                else:
-                    self.conn.execute(
-                        "UPDATE seed_sources SET active=0, updated_at=?",
-                        (now,),
-                    )
 
     def list_seed_sources(self) -> list[SeedSource]:
         cur = self.conn.execute(
