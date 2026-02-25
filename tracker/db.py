@@ -112,7 +112,9 @@ class Database:
         self.conn.executescript(SCHEMA_SQL)
         self.conn.commit()
 
-    def upsert_seed_sources(self, sources: list[SeedSource]) -> None:
+    def upsert_seed_sources(
+        self, sources: list[SeedSource], deactivate_missing: bool = False
+    ) -> None:
         now = datetime.utcnow().isoformat()
         with self.conn:
             for src in sources:
@@ -127,6 +129,23 @@ class Database:
                     """,
                     (src.tag, src.url, now),
                 )
+            if deactivate_missing:
+                urls = [src.url for src in sources]
+                if urls:
+                    placeholders = ",".join("?" for _ in urls)
+                    self.conn.execute(
+                        f"""
+                        UPDATE seed_sources
+                        SET active=0, updated_at=?
+                        WHERE url NOT IN ({placeholders})
+                        """,
+                        (now, *urls),
+                    )
+                else:
+                    self.conn.execute(
+                        "UPDATE seed_sources SET active=0, updated_at=?",
+                        (now,),
+                    )
 
     def list_seed_sources(self) -> list[SeedSource]:
         cur = self.conn.execute(

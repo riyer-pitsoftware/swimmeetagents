@@ -164,7 +164,7 @@ def _process_url(
 
 def _load_sources(db: Database, config: AppConfig, extra_urls: list[str]) -> list[str]:
     seeds = parse_sources_markdown(config.sources_file)
-    db.upsert_seed_sources(seeds)
+    db.upsert_seed_sources(seeds, deactivate_missing=True)
     urls = [s.url for s in db.list_seed_sources()]
     urls.extend(extra_urls)
     return sorted(set(urls))

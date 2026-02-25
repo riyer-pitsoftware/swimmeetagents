@@ -29,7 +29,7 @@ def parse_sources_markdown(path: Path) -> list[SeedSource]:
 
 def cmd_refresh(db: Database, sources_file: Path) -> int:
     sources = parse_sources_markdown(sources_file)
-    db.upsert_seed_sources(sources)
+    db.upsert_seed_sources(sources, deactivate_missing=True)
     print(f"loaded {len(sources)} sources from {sources_file}")
     return 0
 

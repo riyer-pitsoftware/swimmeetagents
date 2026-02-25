@@ -82,7 +82,7 @@ def create_app() -> Flask:
         db = _db()
         try:
             sources = parse_sources_markdown(config.sources_file)
-            db.upsert_seed_sources(sources)
+            db.upsert_seed_sources(sources, deactivate_missing=True)
             return jsonify({"ok": True, "count": len(sources)})
         finally:
             db.close()
