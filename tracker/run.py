@@ -111,7 +111,11 @@ def _process_url(
     for child in adapter.discover_urls(payload)[:8]:
         if urlparse(child).scheme not in ("http", "https"):
             continue
-        child_policy = evaluate_child_policy(child)
+        child_policy = evaluate_child_policy(
+            child,
+            config.user_agent,
+            config.http_timeout_seconds,
+        )
         if not child_policy.allowed:
             db.log_fetch(child, status="blocked", error=child_policy.reason or "blocked_target")
             print(f"skip blocked child target: {child} reason={child_policy.reason}")

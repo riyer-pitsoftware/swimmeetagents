@@ -33,8 +33,13 @@ def evaluate_source_policy(
     return ALLOW
 
 
-def evaluate_child_policy(child_url: str) -> PolicyDecision:
-    blocked, reason = is_target_blocked(child_url)
-    if blocked:
-        return PolicyDecision(allowed=False, reason=reason or "target_blocked")
-    return ALLOW
+def evaluate_child_policy(
+    child_url: str,
+    user_agent: str,
+    timeout_seconds: int,
+) -> PolicyDecision:
+    return evaluate_source_policy(
+        source_url=child_url,
+        user_agent=user_agent,
+        timeout_seconds=timeout_seconds,
+    )
